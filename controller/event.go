@@ -266,7 +266,6 @@ func GetEventAttendees(c *gin.Context) {
 		return
 	}
 
-	// require logged in user
 	session := sessions.Default(c)
 	user := session.Get("user")
 	if user == nil {
@@ -280,11 +279,9 @@ func GetEventAttendees(c *gin.Context) {
 		return
 	}
 
-	// build response: only accepted attendees (allow legacy "going")
 	out := make([]gin.H, 0, len(event.Attendees))
 	for _, a := range event.Attendees {
 		if a.Status == "accepted" || a.Status == "going" {
-			// derive a display name from email local-part
 			local := a.Email
 			if parts := strings.Split(a.Email, "@"); len(parts) > 0 {
 				local = parts[0]
@@ -340,14 +337,21 @@ func DeleteEvent(c *gin.Context) {
 
 func SearchEvents(c *gin.Context) {
 	q := c.Query("q")
+	date := c.Query("date")
 	session := sessions.Default(c)
 	user := session.Get("user")
 
-	searchFilter := bson.M{
-		"$or": []bson.M{
+	searchFilter := bson.M{}
+
+	if q != "" {
+		searchFilter["$or"] = []bson.M{
 			{"title": bson.M{"$regex": q, "$options": "i"}},
 			{"description": bson.M{"$regex": q, "$options": "i"}},
-		},
+		}
+	}
+
+	if date != "" {
+		searchFilter["date"] = date
 	}
 
 	if user != nil {
@@ -387,7 +391,6 @@ func GetEventByID(c *gin.Context) {
 		return
 	}
 
-	// require logged in user
 	session := sessions.Default(c)
 	user := session.Get("user")
 	if user == nil {
